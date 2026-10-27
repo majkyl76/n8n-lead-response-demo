@@ -1,6 +1,6 @@
 # Lead response workflow (n8n demo)
 
-n8n is an open-source workflow automation tool, and this is a small demo of how
+n8n is a fair-code workflow automation tool, and this is a small demo of how
 a new lead can be handled from start to finish: validated, checked for
 duplicates, answered with an AI reply, sent an SMS, and logged. A separate
 workflow catches a failed step and posts an alert, and it runs on dummy data
@@ -10,7 +10,8 @@ with no credentials.
 
 ![Workflow structure](docs/workflow-diagram.png)
 
-The tests (picture generated from a real `npm test` run):
+The tests (a tidied picture of real `npm test` output, not a raw terminal
+capture):
 
 ![npm test output](docs/tests.png)
 
@@ -61,7 +62,8 @@ This runs `node --test`, which covers:
 
 These workflows were imported and run locally on 27 October 2026 on a
 self-hosted n8n 2.44.7 instance on the same machine, using the n8n CLI. The
-steps that worked:
+full evidence (commands, trimmed outputs and the five executions) is in
+[docs/import-run.md](docs/import-run.md). The steps that worked:
 
 1. Import `error-handler.json` first and read its id:
    ```
@@ -83,7 +85,12 @@ steps that worked:
 4. The HTTP Request nodes point at `https://example.invalid/...` placeholders.
    Replace them with your real AI, SMS, and alert endpoints before use.
 
-## Reliability notes
+On n8n Cloud or in the UI (no CLI), use Import from File (Workflows menu,
+Import from File) with the same two files: import `error-handler.json` first,
+then set it as the error workflow in the lead-response workflow settings. This
+UI route has not been tried here; only the CLI route above was run.
+
+## How failures are handled
 
 - **Validation** - the payload is checked for `id`, `name`, `phone`, and
   `message` before anything else runs. A missing field throws a clear error.
