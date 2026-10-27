@@ -175,8 +175,10 @@ Posting `samples/lead.json` (id `lead-1001`) to the webhook, as recorded in
   `Missing required field: phone` and the run stops there.
 
 Because AI reply and Send SMS target placeholder addresses, Log result is
-never reached in this run. Once real endpoints are in place, it produces a
-small object along the lines of:
+never reached in this run, so `docs/import-run.md` has no observed timestamp
+for it. Once real endpoints are in place, it produces a small object along
+the lines of (the `at` value below is an illustrative example, not an
+observed run):
 
 ```json
 { "status": "processed", "id": "lead-1001", "at": "2026-10-27T12:00:00.000Z" }
