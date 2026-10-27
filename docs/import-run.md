@@ -91,3 +91,7 @@ and the error handler's Code node all behave as expected; the HTTP Request
 nodes fail as expected against the unresolvable `example.invalid`
 placeholders; and the error workflow fires end to end once it is activated
 alongside the main workflow.
+
+Because the HTTP calls never reach a real endpoint here, the data flow after
+those nodes (Send SMS, Log result) is covered by `test/workflows.test.js`
+rather than by this live run.

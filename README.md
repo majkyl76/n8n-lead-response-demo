@@ -58,6 +58,15 @@ module can't silently drift apart - see [Tests](#tests).
 
 ## How to run it
 
+Install the n8n CLI first:
+
+```
+npm install -g n8n@2.44.7
+```
+
+That's the version this was run on (see [docs/import-run.md](docs/import-run.md));
+other versions have not been tried.
+
 Using the n8n CLI:
 
 1. Import `error-handler.json` first and read its id:
@@ -130,37 +139,42 @@ npm test
 
 Node 18 or newer is required (uses the built-in `node:test` runner). No
 dependencies to install. Abridged output of `npm test` (a representative
-slice of the 27 `✔` lines, plus the full summary `node --test` prints):
+slice of the 29 `✔` lines, plus the full summary `node --test` prints):
 
 ```
 > n8n-lead-response-demo@1.0.0 test
 > node --test
 
-✔ treats a new id as not a duplicate and records it (1.198607ms)
-✔ accepts a valid payload (1.712216ms)
-✔ rejects a payload missing id (0.490416ms)
+✔ treats a new id as not a duplicate and records it (1.460199ms)
+✔ accepts a valid payload (1.388529ms)
+✔ rejects a payload missing id (0.396194ms)
 ...
-✔ Validate payload node code: accepts a valid payload, matching src/validate.js (2.274874ms)
-✔ Dedupe node code: a repeated id is a duplicate, matching src/dedupe.js (0.152056ms)
+✔ Validate payload node code: accepts a valid payload, matching src/validate.js (2.521522ms)
+✔ Dedupe node code: a repeated id is a duplicate, matching src/dedupe.js (0.170442ms)
+✔ Send SMS jsonBody expression takes phone from Validate payload, not the AI reply response (0.362222ms)
+✔ Log result code takes the lead id from Validate payload/Dedupe, not the Send SMS response (0.577136ms)
 ...
-✔ lead-response: settings.errorWorkflow is set (0.09419ms)
-ℹ tests 27
+✔ lead-response: settings.errorWorkflow is set (0.10388ms)
+ℹ tests 29
 ℹ suites 0
-ℹ pass 27
+ℹ pass 29
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 69.464315
+ℹ duration_ms 79.715006
 ```
 
-27 tests, all passing. They cover: a valid payload accepted; each of `id`,
+29 tests, all passing. They cover: a valid payload accepted; each of `id`,
 `name`, `phone`, `message` rejected when missing or empty; a new lead id
 accepted and a repeated one treated as a duplicate; the same payload and
 missing-field cases run directly against the `jsCode` embedded in the
 Validate payload and Dedupe nodes of `workflows/lead-response.json`,
 checked against `src/validate.js` and `src/dedupe.js` so the two copies
-can't silently drift apart; both workflow JSON files loading with every
+can't silently drift apart; the `Send SMS` node's `jsonBody` expression and
+the `Log result` node's `jsCode`, run with stand-in HTTP responses in place
+of the AI reply and SMS provider, to confirm the lead's `phone` and `id`
+survive both HTTP Request nodes; both workflow JSON files loading with every
 connection target pointing at a real node; the HTTP Request nodes having
 `retryOnFail` set; and the main workflow's `settings.errorWorkflow` being
 set.
