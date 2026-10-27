@@ -1,10 +1,29 @@
-# n8n-lead-response-demo
+# Lead response workflow (n8n demo)
 
-A small portfolio sample showing a reliable n8n workflow: a new lead arrives,
-an AI reply is generated, an SMS is sent, and the result is logged. It includes
-a separate error handling workflow.
+n8n is a fair-code workflow automation tool, and this is a small demo of how
+a new lead can be handled from start to finish: validated, checked for
+duplicates, answered with an AI reply, sent an SMS, and logged. A separate
+workflow catches a failed step and posts an alert, and it runs on dummy data
+with no credentials.
 
-This is a demo built with dummy data. It is not a production system.
+## What you will see
+
+![Workflow structure](docs/workflow-diagram.png)
+
+The tests (a tidied picture of real `npm test` output, not a raw terminal
+capture):
+
+![npm test output](docs/tests.png)
+
+To reproduce it:
+
+```
+npm test
+```
+
+Run that with Node 18 or newer (no dependencies to install) and you will see
+19 passing tests. They prove the validation and dedupe logic behaves, and that
+both workflow files are wired up correctly.
 
 ## What it is
 
@@ -20,19 +39,6 @@ CommonJS functions so they can be unit tested.
 - `src/validate.js` and `src/dedupe.js` - the same logic as the Code nodes,
   importable and testable.
 - `samples/lead.json` - an example payload with fake data.
-
-## How to import into n8n
-
-1. Open your n8n instance.
-2. For each file in `workflows/`, use **Import from File** (or paste the JSON
-   via the workflow menu) and select the file.
-3. Import `error-handler.json` first, then open its settings to read its
-   workflow id.
-4. Open `lead-response.json` settings and set the **Error Workflow** to the
-   imported error handler. The JSON ships with the placeholder id
-   `ERROR_WORKFLOW_ID`, which you must replace with the real id.
-5. The HTTP Request nodes point at `https://example.invalid/...` placeholders.
-   Replace them with your real AI, SMS, and alert endpoints before use.
 
 ## How to run the tests
 
@@ -52,7 +58,39 @@ This runs `node --test`, which covers:
   the HTTP Request nodes have `retryOnFail` enabled, and the main workflow has
   `settings.errorWorkflow` set.
 
-## Reliability notes
+## How to import into n8n
+
+These workflows were imported and run locally on 27 October 2026 on a
+self-hosted n8n 2.44.7 instance on the same machine, using the n8n CLI. The
+full evidence (commands, trimmed outputs and the five executions) is in
+[docs/import-run.md](docs/import-run.md). The steps that worked:
+
+1. Import `error-handler.json` first and read its id:
+   ```
+   n8n import:workflow --input=workflows/error-handler.json
+   n8n list:workflow
+   ```
+2. In `lead-response.json`, replace the placeholder `ERROR_WORKFLOW_ID` in
+   `settings.errorWorkflow` with that id, then import it:
+   ```
+   n8n import:workflow --input=workflows/lead-response.json
+   ```
+3. Activate **both** workflows. If the error handler is left inactive, n8n logs
+   that the workflow is not active and cannot be executed when a lead-response
+   run fails, and the alert path stays silent:
+   ```
+   n8n update:workflow --active=true --id=<lead-response id>
+   n8n update:workflow --active=true --id=<error-handler id>
+   ```
+4. The HTTP Request nodes point at `https://example.invalid/...` placeholders.
+   Replace them with your real AI, SMS, and alert endpoints before use.
+
+On n8n Cloud or in the UI (no CLI), use Import from File (Workflows menu,
+Import from File) with the same two files: import `error-handler.json` first,
+then set it as the error workflow in the lead-response workflow settings. This
+UI route has not been tried here; only the CLI route above was run.
+
+## How failures are handled
 
 - **Validation** - the payload is checked for `id`, `name`, `phone`, and
   `message` before anything else runs. A missing field throws a clear error.
@@ -66,6 +104,12 @@ This runs `node --test`, which covers:
 
 ## Honest note
 
-The endpoint URLs are placeholders (`https://example.invalid/...`) and the
-credentials are not included. This project has not been run against live AI,
-SMS, or alerting services. It is a structural and logic demo only. The workflow JSON has not been imported into a live n8n instance yet, so expect to tidy node settings on first import. Workflow static data only persists for active (production) executions, not manual test runs.
+- The endpoint URLs are placeholders (`https://example.invalid/...`) and no
+  credentials are included.
+- It was imported and run locally on 27 October 2026 on a self-hosted n8n
+  2.44.7 instance on the same machine, using the n8n CLI, with dummy data posted
+  to the webhook. In that run the HTTP Request nodes failed after their retries
+  against `example.invalid`, as expected; a duplicate lead was skipped; a lead
+  with a missing `phone` failed validation; and the error workflow fired once it
+  had been activated.
+- It has never been run against live AI, SMS, or alert services.
