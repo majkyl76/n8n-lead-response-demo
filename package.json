@@ -1,7 +1,15 @@
 {
   "name": "n8n-lead-response-demo",
   "version": "1.0.0",
-  "description": "Portfolio demo of an n8n lead-response workflow with validation, dedupe, retries and error handling.",
+  "description": "Demo n8n workflow that validates a new lead, skips repeats, texts a reply and raises an alert on failure. Run locally on dummy data.",
+  "keywords": [
+    "n8n",
+    "workflow",
+    "automation",
+    "lead-response",
+    "webhook",
+    "sms"
+  ],
   "private": true,
   "engines": {
     "node": ">=18"
