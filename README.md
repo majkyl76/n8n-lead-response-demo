@@ -49,12 +49,16 @@ editor canvas), is in
 
 ![Workflow structure](docs/workflow-diagram.png)
 
-The diagram's legend marks Validate payload and Dedupe yellow for "logic
-tested in test/". That refers to the `jsCode` actually embedded in those two
-Code nodes: `test/workflows.test.js` runs those strings directly (not just
-the standalone copies in `src/`) and checks the result against
-`src/validate.js` / `src/dedupe.js`, so the node code and the extracted
-module can't silently drift apart - see [Tests](#tests).
+The diagram's legend marks Validate payload, Dedupe, Send SMS and Log result
+with a dashed border for "logic checked directly in test/". For Validate
+payload and Dedupe, that means `test/workflows.test.js` runs the `jsCode`
+actually embedded in those two Code nodes (not just the standalone copies in
+`src/`) and checks the result against `src/validate.js` / `src/dedupe.js`, so
+the node code and the extracted module can't silently drift apart. For Send
+SMS and Log result, there's no standalone `src/` copy to compare against -
+instead the test runs the `jsonBody` expression and `jsCode` with stand-in
+HTTP responses to confirm the lead's `phone` and `id` survive both HTTP
+Request nodes - see [Tests](#tests).
 
 ## How to run it
 
