@@ -70,7 +70,11 @@ Using the n8n CLI:
    ```
 4. The HTTP Request nodes point at `https://example.invalid/...`
    placeholders. Replace them with your real AI, SMS, and alert endpoints
-   before use.
+   before use. The AI endpoint's response must be JSON with a `reply` string
+   field - the Send SMS node reads `$json.reply` (see
+   `workflows/lead-response.json`'s "Send SMS" node) to build the SMS body,
+   so an endpoint returning anything else will send an empty or broken
+   message.
 
 On n8n Cloud or in the UI, use **Import from File** (Workflows menu) with the
 same two files: import `error-handler.json` first, then set it as the error
