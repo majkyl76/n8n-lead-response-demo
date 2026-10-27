@@ -201,7 +201,7 @@ the lines of (the `at` value below is an illustrative example, not an
 observed run):
 
 ```json
-{ "status": "processed", "id": "lead-1001", "at": "2026-10-27T12:00:00.000Z" }
+{ "status": "processed", "id": "lead-1001", "at": "2024-01-01T00:00:00.000Z" }
 ```
 
 With both workflows active, a failing run is also picked up by Error
