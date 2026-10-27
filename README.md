@@ -232,3 +232,6 @@ placeholder endpoint (which also fails, for the same reason).
   unreachable, Send alert fails and nothing else notifies anyone. Check
   n8n's failed-execution list rather than relying on an alert always
   arriving.
+- **Unbounded dedupe store** - every processed lead id is kept forever in
+  the workflow static data, so on a busy instance it grows without bound.
+  Prune old ids or move dedupe to a database or Redis before heavy use.
