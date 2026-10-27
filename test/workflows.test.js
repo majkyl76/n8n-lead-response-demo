@@ -128,12 +128,12 @@ test('Dedupe node code: a missing id throws, matching src/dedupe.js', () => {
   assert.throws(() => runCodeNode(dedupeCode, { id: '' }, {}), { message: expectedMessage });
 });
 
-test('Send SMS jsonBody expression takes phone from Validate payload, not the AI reply response', () => {
+test('Send SMS jsonBody expression takes phone from Validate payload, not the Draft reply response', () => {
   const sendSmsNode = leadResponse.nodes.find((n) => n.name === 'Send SMS');
   assert.ok(sendSmsNode, 'node exists: Send SMS');
 
   const originalLead = { ...basePayload };
-  // Send SMS's own input ($json) is whatever AI reply's HTTP response was,
+  // Send SMS's own input ($json) is whatever Draft reply's HTTP response was,
   // which replaces the item json and has no lead fields on it.
   const aiReplyResponse = { reply: 'Thanks for reaching out, Jane!' };
 

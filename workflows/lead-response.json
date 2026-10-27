@@ -46,7 +46,7 @@
         "options": {}
       },
       "id": "f0c896b0-3116-4868-8f80-ca1e35bba017",
-      "name": "AI reply",
+      "name": "Draft reply",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [900, 300],
@@ -96,10 +96,10 @@
     },
     "Dedupe": {
       "main": [
-        [{ "node": "AI reply", "type": "main", "index": 0 }]
+        [{ "node": "Draft reply", "type": "main", "index": 0 }]
       ]
     },
-    "AI reply": {
+    "Draft reply": {
       "main": [
         [{ "node": "Send SMS", "type": "main", "index": 0 }]
       ]

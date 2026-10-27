@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Redraws docs/workflow-diagram.png from the node/connection structure in
-workflows/*.json: node names, order and HTTP retry counts are read from the
-workflow files, not typed in by hand. Colour fill marks node kind (trigger /
-log, standalone logic, HTTP call to a placeholder endpoint, error handler);
-the dashed border marks which nodes have their actual logic (jsCode or an
-expression) run against assertions in test/workflows.test.js, which is
-tracked here since the test file is the source of truth for that, not the
-workflow JSON.
+"""Redraws docs/workflow-diagram.png from workflows/*.json.
+
+Node names, order and the number of HTTP tries come from the workflow
+files, not from anything typed in here. Fill colour shows the kind of node
+(trigger or log, plain logic, HTTP call to a placeholder endpoint, error
+handler). A dashed border means test/workflows.test.js runs that node's
+actual jsCode or expression. That list is kept by hand in TESTED below,
+because the workflow JSON doesn't say what the tests cover.
 """
 
 import json
@@ -30,24 +30,21 @@ FILL = {
     'pink': (255, 226, 226),
 }
 
-# Which nodes have their own logic (not just a round trip through them)
-# checked directly in test/workflows.test.js, and the fill colour for their
-# kind. These are facts about the test suite and about each node's role
-# (trigger/log vs validation vs logging vs a call to an external service),
-# which aren't recoverable from the workflow JSON alone.
+# Nodes whose own logic (not just the data passing through) is checked in
+# test/workflows.test.js, and a fill colour per node by role. Neither can
+# be worked out from the workflow JSON, so both are written out here.
 TESTED = {'Validate payload', 'Dedupe', 'Send SMS', 'Log result'}
 CATEGORY = {
     'Webhook': 'blue',
     'Validate payload': 'yellow',
     'Dedupe': 'yellow',
-    'AI reply': 'green',
+    'Draft reply': 'green',
     'Send SMS': 'green',
     'Log result': 'blue',
 }
 
-# Tried in order so the diagram can be regenerated outside the original
-# Linux dev box: DejaVu (most Linux distros), then macOS and Windows system
-# fonts, falling back to Pillow's built-in bitmap font if none are found.
+# Font paths to try in order: DejaVu on most Linux boxes, then macOS and
+# Windows system fonts. If none exist, Pillow's built-in bitmap font is used.
 BOLD_CANDIDATES = [
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
     '/System/Library/Fonts/Helvetica.ttc',
@@ -104,7 +101,7 @@ def subtitle(node):
     if t == 'n8n-nodes-base.webhook':
         return '%s /%s' % (p.get('httpMethod', 'POST'), p.get('path', ''))
     if t == 'n8n-nodes-base.httpRequest' and node.get('retryOnFail'):
-        return 'retry up to %d times' % node['maxTries']
+        return '%d tries, 2 s apart' % node['maxTries']
     if node['name'] == 'Validate payload':
         return 'id, name, phone, message'
     if node['name'] == 'Dedupe':
