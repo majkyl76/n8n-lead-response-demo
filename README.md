@@ -1,37 +1,44 @@
-# Lead response workflow
+# Lead response workflow (n8n demo)
 
-## The problem
+This is a small n8n demo I built to show how I handle a new lead: check it,
+make sure it isn't a repeat, write a reply, send it by SMS, and raise an
+alert if anything breaks along the way.
 
-A new lead comes in - a contact-form submission, a missed-call callback
-request - and what happens in the next few minutes decides whether it turns
-into a customer. Handled by hand, replies are slow, the same enquiry can get
-answered twice if it arrives more than once, and a failed step (a bounced
-SMS, a dead API) tends to fail silently: nobody notices until the lead has
-gone cold or complained.
+It is a demo. I ran it locally on my own machine with dummy data. It has
+never talked to a real reply service, SMS provider or alert endpoint, and
+every URL in it is a placeholder.
 
-## What it does
+## Why bother
+
+When a lead comes in from a contact form or a missed-call request, the first
+few minutes matter. Done by hand, replies are slow. The same enquiry can get
+two answers if it arrives twice. And when a step fails, say an SMS bounces or
+an API is down, it often fails quietly, and nobody notices until the lead
+has gone cold.
+
+## What's in the repo
 
 Two n8n workflows:
 
-- **Lead Response** (`workflows/lead-response.json`) - a webhook receives a
-  new lead, validates it, checks it hasn't been seen before, asks an AI
-  endpoint for a reply, sends it by SMS, and logs the result.
-- **Error Handler** (`workflows/error-handler.json`) - catches a failure
-  anywhere in Lead Response, builds a plain-text alert (workflow, failing
-  node, error message, execution link), and posts it to an alert endpoint.
+- Lead Response (`workflows/lead-response.json`). A webhook receives a lead,
+  validates it, checks the lead id hasn't been seen before, asks a reply
+  endpoint for some text, sends that text by SMS and logs the result.
+- Error Handler (`workflows/error-handler.json`). Catches a failure in Lead
+  Response, builds a plain-text alert (workflow name, failing node, error
+  message, execution link) and posts it to an alert endpoint.
 
-The validation and dedupe logic is also pulled out into plain CommonJS
-(`src/validate.js`, `src/dedupe.js`) so it can be unit tested without n8n
-running. `samples/lead.json` is an example payload with fake data.
+The validation and dedupe logic also lives in two small CommonJS files,
+`src/validate.js` and `src/dedupe.js`, so it can be tested without n8n
+running. `samples/lead.json` is an example payload with made-up data.
 
-## Architecture
+## Structure
 
 ```mermaid
 flowchart LR
     subgraph LR1["Lead Response"]
         A["Webhook<br/>POST /lead"] --> B["Validate payload"]
         B --> C["Dedupe"]
-        C --> D["AI reply"]
+        C --> D["Draft reply"]
         D --> E["Send SMS"]
         E --> F["Log result"]
     end
@@ -42,29 +49,26 @@ flowchart LR
     LR1 -.->|any node fails, via settings.errorWorkflow| EH1
 ```
 
-A diagram drawn from the same structure, generated from the nodes and
-connections in the actual workflow JSON (not a screenshot of the n8n
-editor canvas), is in
-[`docs/workflow-diagram.png`](docs/workflow-diagram.png):
+There is also a picture of the same structure in
+[`docs/workflow-diagram.png`](docs/workflow-diagram.png). It is drawn from
+the nodes and connections in the workflow JSON, so it is not a screenshot of
+the n8n editor.
 
 ![Workflow structure](docs/workflow-diagram.png)
 
-The diagram's legend marks Validate payload, Dedupe, Send SMS and Log result
-with a dashed border for "logic checked directly in test/". For Validate
-payload and Dedupe, that means `test/workflows.test.js` runs the `jsCode`
-actually embedded in those two Code nodes (not just the standalone copies in
-`src/`) and checks the result against `src/validate.js` / `src/dedupe.js`, so
-the node code and the extracted module can't silently drift apart. For Send
-SMS and Log result, there's no standalone `src/` copy to compare against -
-instead the test runs the `jsonBody` expression and `jsCode` with stand-in
-HTTP responses to confirm the lead's `phone` and `id` survive both HTTP
-Request nodes - see [Tests](#tests).
+A dashed border in the picture means the node's logic is checked directly in
+`test/workflows.test.js`. For Validate payload and Dedupe, the test runs the
+`jsCode` that is actually inside those Code nodes and compares the result
+with `src/validate.js` and `src/dedupe.js`. That stops the node code and the
+extracted modules drifting apart. Send SMS and Log result have no copy in
+`src/`. For those two, the test runs the `jsonBody` expression and the
+`jsCode` against stand-in HTTP responses, to check that the lead's `phone`
+and `id` are still available after the HTTP nodes. See [Tests](#tests).
 
-To regenerate the diagram after changing a workflow file, install Pillow
-and run the script: `pip install Pillow`, then
+To redraw the picture after editing a workflow: `pip install Pillow`, then
 `python3 docs/generate-diagram.py`.
 
-## How to run it
+## Running it
 
 Install the n8n CLI first:
 
@@ -72,72 +76,62 @@ Install the n8n CLI first:
 npm install -g n8n@2.44.7
 ```
 
-That's the version this was run on (see [docs/import-run.md](docs/import-run.md));
-other versions have not been tried.
+That is the version I used (see [docs/import-run.md](docs/import-run.md)). I
+haven't tried any other.
 
-Using the n8n CLI:
+Then, from the repo root:
 
-1. Import `error-handler.json` first and read its id:
+1. Import the error handler first and note its id:
    ```
    n8n import:workflow --input=workflows/error-handler.json
    n8n list:workflow
    ```
-2. In `lead-response.json`, replace the placeholder `ERROR_WORKFLOW_ID` in
-   `settings.errorWorkflow` with that id, then import it:
+2. Open `workflows/lead-response.json` and replace the placeholder
+   `ERROR_WORKFLOW_ID` in `settings.errorWorkflow` with that id. Then import
+   it:
    ```
    n8n import:workflow --input=workflows/lead-response.json
    ```
-3. Activate **both** workflows. If the error handler is left inactive, n8n
-   logs that the workflow is not active and cannot be executed when a
-   lead-response run fails, and the alert path stays silent:
+3. Activate both workflows. If the error handler is left inactive, n8n logs
+   that it is not active and cannot be executed when a lead-response run
+   fails, and no alert goes out:
    ```
    n8n update:workflow --active=true --id=<lead-response id>
    n8n update:workflow --active=true --id=<error-handler id>
    ```
-4. The HTTP Request nodes point at `https://example.invalid/...`
-   placeholders. Replace them with your real AI, SMS, and alert endpoints
-   before use. The AI endpoint's response must be JSON with a `reply` string
-   field - the Send SMS node reads `$json.reply` (see
-   `workflows/lead-response.json`'s "Send SMS" node) to build the SMS body,
-   so an endpoint returning anything else will send an empty or broken
-   message.
+4. The HTTP Request nodes point at `https://example.invalid/...`. Swap in
+   real reply, SMS and alert endpoints before using it for anything. The
+   reply endpoint has to return JSON with a `reply` string. Send SMS reads
+   `$json.reply` for the message body, so any other shape gives an empty or
+   broken SMS.
 
-On n8n Cloud or in the UI, use **Import from File** (Workflows menu) with the
-same two files: import `error-handler.json` first, then set it as the error
-workflow in the Lead Response workflow settings. This UI route has not been
-tried here; only the CLI route above was run, recorded in
-[docs/import-run.md](docs/import-run.md).
+In the n8n editor, use Import from File with the same two files, error
+handler first, then pick it as the error workflow in the Lead Response
+settings. I haven't tried that route. I only ran the CLI one, and the
+record of that run is in [docs/import-run.md](docs/import-run.md).
 
 ## Design decisions
 
-- **Validation** - the payload is checked for `id`, `name`, `phone`, and
-  `message` before anything else runs, and throws a clear error naming the
-  first missing or empty field. This keeps invalid leads from ever reaching
-  the AI or SMS calls.
-- **Dedupe** - processed lead ids are kept in n8n workflow static data (a
-  plain object that persists between executions), so a lead id seen before
-  is skipped rather than answered twice. This is simple and needs no extra
-  infrastructure, but it has real limits - see "Dedupe limits" under
-  [Known limits](#known-limits). A production version would key dedupe off
-  a real datastore instead.
-- **Retries** - the AI reply, Send SMS and Send alert HTTP Request nodes all
-  use `retryOnFail` with `maxTries: 3` and a 2000 ms wait between tries. In
-  n8n, `maxTries` counts the total number of attempts, including the first
-  call - so 3 means at most 2 retries after the initial try, not 3 retries
-  on top of it.
-- **Error workflow** - the main workflow's `settings.errorWorkflow` points at
-  the error handler (shipped as the placeholder `ERROR_WORKFLOW_ID`,
-  replaced on import). n8n only calls that workflow if it is itself active:
-  with the error handler inactive, n8n logs that the workflow is not active
-  and cannot be executed, and no alert fires. Both workflows need to be
-  active for the error path to work, which is confirmed in
-  [docs/import-run.md](docs/import-run.md).
-- **On failure** - a validation error throws immediately and never reaches
-  dedupe or the AI call. An HTTP failure (AI reply or SMS) retries up to the
-  configured attempts; if it's still failing, the execution ends in error
-  and, with the error handler active, is routed there: Error Trigger picks
-  it up, Format message builds a plain-text summary, and Send alert posts it
-  to the alert endpoint.
+- Validation. The payload must have `id`, `name`, `phone` and `message`. If
+  one is missing or empty, the node throws an error naming the first one, so
+  a bad lead never reaches the reply or SMS calls.
+- Dedupe. Processed lead ids are kept in the workflow's static data, a plain
+  object n8n keeps between executions. A lead id seen before is dropped
+  instead of answered twice. It needs no extra infrastructure, but it has
+  real limits (see [Known limits](#known-limits)). For production I would
+  use a proper datastore.
+- Retries. Draft reply, Send SMS and Send alert all use `retryOnFail` with
+  `maxTries: 3` and 2000 ms between tries. In n8n, `maxTries` counts every
+  attempt including the first, so that is at most two retries, not three.
+- Error workflow. `settings.errorWorkflow` in Lead Response points at the
+  error handler. It ships as the placeholder `ERROR_WORKFLOW_ID`, which you
+  replace by hand (step 2 above). n8n only calls an error workflow that is
+  active, which the local run confirmed ([docs/import-run.md](docs/import-run.md)).
+- When something fails. A validation error stops the run straight away, so
+  nothing after it runs. If Draft reply or Send SMS still fails after its
+  tries, the execution ends in error. With the error handler active, Error
+  Trigger picks that up, Format message builds the text and Send alert posts
+  it.
 
 ## Tests
 
@@ -145,9 +139,10 @@ tried here; only the CLI route above was run, recorded in
 npm test
 ```
 
-Node 18 or newer is required (uses the built-in `node:test` runner). No
-dependencies to install. Abridged output of `npm test` (a representative
-slice of the 29 `✔` lines, plus the full summary `node --test` prints):
+You need Node 18 or newer, because it uses the built-in `node:test` runner.
+There are no dependencies to install. A cut-down copy of the output (the
+real run prints 29 `✔` lines, and the summary is what `node --test` prints
+at the end):
 
 ```
 > n8n-lead-response-demo@1.0.0 test
@@ -159,7 +154,7 @@ slice of the 29 `✔` lines, plus the full summary `node --test` prints):
 ...
 ✔ Validate payload node code: accepts a valid payload, matching src/validate.js (2.521522ms)
 ✔ Dedupe node code: a repeated id is a duplicate, matching src/dedupe.js (0.170442ms)
-✔ Send SMS jsonBody expression takes phone from Validate payload, not the AI reply response (0.362222ms)
+✔ Send SMS jsonBody expression takes phone from Validate payload, not the Draft reply response (0.362222ms)
 ✔ Log result code takes the lead id from Validate payload/Dedupe, not the Send SMS response (0.577136ms)
 ...
 ✔ lead-response: settings.errorWorkflow is set (0.10388ms)
@@ -173,69 +168,67 @@ slice of the 29 `✔` lines, plus the full summary `node --test` prints):
 ℹ duration_ms 79.715006
 ```
 
-29 tests, all passing. They cover: a valid payload accepted; each of `id`,
-`name`, `phone`, `message` rejected when missing or empty; a new lead id
-accepted and a repeated one treated as a duplicate; the same payload and
-missing-field cases run directly against the `jsCode` embedded in the
-Validate payload and Dedupe nodes of `workflows/lead-response.json`,
-checked against `src/validate.js` and `src/dedupe.js` so the two copies
-can't silently drift apart; the `Send SMS` node's `jsonBody` expression and
-the `Log result` node's `jsCode`, run with stand-in HTTP responses in place
-of the AI reply and SMS provider, to confirm the lead's `phone` and `id`
-survive both HTTP Request nodes; both workflow JSON files loading with every
-connection target pointing at a real node; the HTTP Request nodes having
-`retryOnFail` set; and the main workflow's `settings.errorWorkflow` being
-set.
+What the 29 tests cover:
 
-## Sample output
+- A valid payload is accepted, and each of `id`, `name`, `phone` and
+  `message` is rejected when missing or empty.
+- A new lead id is accepted, a repeated one is treated as a duplicate, and a
+  missing id throws.
+- The same payload and missing-field cases run against the `jsCode` inside
+  the Validate payload and Dedupe nodes, checked against `src/validate.js`
+  and `src/dedupe.js`.
+- The Send SMS `jsonBody` expression and the Log result `jsCode`, run with
+  stand-in responses in place of the reply endpoint and SMS provider, to
+  confirm `phone` and `id` survive both HTTP Request nodes.
+- Both workflow files load, and every connection points at a real node.
+- Every HTTP Request node has `retryOnFail`, `maxTries` 3 and a 2000 ms
+  wait, and `settings.errorWorkflow` is set on Lead Response.
+
+## What the local run showed
 
 Posting `samples/lead.json` (id `lead-1001`) to the webhook, as recorded in
 [docs/import-run.md](docs/import-run.md):
 
-- The webhook acknowledges immediately: `{"message":"Workflow was started"}`.
-- Validate payload and Dedupe both pass (new id, all fields present).
-- AI reply fails after its 3 tries, because it targets the placeholder
-  `https://example.invalid/ai` - expected without a real endpoint wired in.
+- The webhook answers straight away with `{"message":"Workflow was started"}`.
+- Validate payload and Dedupe both pass, since the id is new and every field
+  is present.
+- Draft reply fails after its three tries. It points at a placeholder
+  address, so that is expected.
 - Posting the same payload again: Dedupe recognises `lead-1001` and returns
-  no items, so the run stops cleanly before AI reply. No duplicate reply is
-  sent.
-- Posting a payload with `phone` missing: Validate payload throws
-  `Missing required field: phone` and the run stops there.
+  no items. The run stops there and no second reply is sent.
+- Posting a payload with no `phone`: Validate payload throws
+  `Missing required field: phone` and the run stops.
 
-Because AI reply and Send SMS target placeholder addresses, Log result is
-never reached in this run, so `docs/import-run.md` has no observed timestamp
-for it. Once real endpoints are in place, it produces a small object along
-the lines of (the `at` value below is an illustrative example, not an
-observed run):
+Because Draft reply and Send SMS point at placeholders, the run never got as
+far as Log result, so I have no real timestamp from it. With working
+endpoints it returns a small object like this. The `at` value here is made
+up:
 
 ```json
 { "status": "processed", "id": "lead-1001", "at": "2024-01-01T00:00:00.000Z" }
 ```
 
-With both workflows active, a failing run is also picked up by Error
-Handler: Error Trigger fires, Format message builds a summary such as
-`Workflow failed: Lead Response`, and Send alert posts it on to its own
-placeholder endpoint (which also fails, for the same reason).
+With both workflows active, a failed run is also picked up by Error Handler.
+Error Trigger fires, Format message builds a summary starting
+`Workflow failed: Lead Response`, and Send alert tries to post it. That
+fails too, for the same reason: its URL is a placeholder.
 
 ## Known limits
 
-- The endpoint URLs are placeholders (`https://example.invalid/...`); swap
-  in real AI, SMS and alert endpoints before use.
-- It has never been run against live AI, SMS, or alert services.
-- **Dedupe limits** - the processed-id store lives in that one workflow's
-  static data on one n8n instance: it is not shared if you run more than one
-  instance, and it is not carried over if the workflow is reimported into a
-  different instance. n8n only persists static data for production
-  executions of an active workflow - manual test runs do not save it back to
-  the workflow record.
-- **No secondary notification path** - if the alert endpoint itself is
-  unreachable, Send alert fails and nothing else notifies anyone. Check
-  n8n's failed-execution list rather than relying on an alert always
-  arriving.
-- **Unbounded dedupe store** - every processed lead id is kept forever in
-  the workflow static data, so on a busy instance it grows without bound.
-  Prune old ids or move dedupe to a database or Redis before heavy use.
-- **No webhook authentication** - the Webhook trigger has no authentication,
-  so anyone who finds the URL can submit leads. Before pointing it at real
-  AI and SMS endpoints, add header auth or a shared secret on the Webhook
-  node, and rate limiting at the proxy.
+- The endpoint URLs are placeholders (`https://example.invalid/...`).
+- It has never been run against a live reply service, SMS provider or alert
+  endpoint.
+- Dedupe state is per instance. The processed ids sit in the static data of
+  this one workflow, so they are not shared between n8n instances and do not
+  come with the workflow if you re-import it somewhere else. n8n also only
+  saves static data for production executions of an active workflow. Manual
+  test runs don't write it back.
+- The dedupe store grows without bound. Every processed lead id is kept
+  forever, so on a busy instance the list just keeps growing. Prune old ids
+  or move dedupe to a database or Redis before heavy use.
+- The webhook has no authentication. Anyone who finds the URL can submit
+  leads. Before pointing it at real endpoints, add header auth or a shared
+  secret on the Webhook node, and rate limiting at the proxy.
+- There is no second alert path. If the alert endpoint is down, Send alert
+  fails and nothing else tells anyone. Check n8n's list of failed
+  executions rather than trusting that an alert always turns up.
