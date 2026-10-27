@@ -49,6 +49,13 @@ editor canvas), is in
 
 ![Workflow structure](docs/workflow-diagram.png)
 
+The diagram's legend marks Validate payload and Dedupe yellow for "logic
+tested in test/". That refers to the `jsCode` actually embedded in those two
+Code nodes: `test/workflows.test.js` runs those strings directly (not just
+the standalone copies in `src/`) and checks the result against
+`src/validate.js` / `src/dedupe.js`, so the node code and the extracted
+module can't silently drift apart - see [Tests](#tests).
+
 ## How to run it
 
 Using the n8n CLI:
@@ -122,42 +129,41 @@ npm test
 ```
 
 Node 18 or newer is required (uses the built-in `node:test` runner). No
-dependencies to install. Output of `npm test`:
+dependencies to install. Abridged output of `npm test` (a representative
+slice of the 27 `✔` lines, plus the full summary `node --test` prints):
 
 ```
 > n8n-lead-response-demo@1.0.0 test
 > node --test
 
-✔ treats a new id as not a duplicate and records it (1.065255ms)
-✔ treats a repeated id as a duplicate (0.105482ms)
-✔ keeps distinct ids separate (0.104342ms)
-✔ throws when the id is missing (0.343524ms)
-✔ accepts a valid payload (1.172336ms)
-✔ rejects a payload missing id (0.358272ms)
-✔ rejects a payload with empty id (0.15427ms)
-✔ rejects a payload missing name (0.096554ms)
-✔ rejects a payload with empty name (0.181009ms)
-✔ rejects a payload missing phone (0.115285ms)
-✔ rejects a payload with empty phone (0.102141ms)
-✔ rejects a payload missing message (0.079968ms)
-✔ rejects a payload with empty message (0.163002ms)
-✔ rejects a non-object payload (0.267105ms)
-✔ lead-response: every connection target refers to a real node (0.740958ms)
-✔ lead-response: HTTP Request nodes have retryOnFail true (0.14026ms)
-✔ error-handler: every connection target refers to a real node (0.082281ms)
-✔ error-handler: HTTP Request nodes have retryOnFail true (0.083021ms)
-✔ lead-response: settings.errorWorkflow is set (0.144532ms)
-ℹ tests 19
-ℹ pass 19
+✔ treats a new id as not a duplicate and records it (1.198607ms)
+✔ accepts a valid payload (1.712216ms)
+✔ rejects a payload missing id (0.490416ms)
+...
+✔ Validate payload node code: accepts a valid payload, matching src/validate.js (2.274874ms)
+✔ Dedupe node code: a repeated id is a duplicate, matching src/dedupe.js (0.152056ms)
+...
+✔ lead-response: settings.errorWorkflow is set (0.09419ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
 ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 69.464315
 ```
 
-19 tests, all passing. They cover: a valid payload accepted; each of `id`,
+27 tests, all passing. They cover: a valid payload accepted; each of `id`,
 `name`, `phone`, `message` rejected when missing or empty; a new lead id
-accepted and a repeated one treated as a duplicate; both workflow JSON files
-loading with every connection target pointing at a real node; the HTTP
-Request nodes having `retryOnFail` set; and the main workflow's
-`settings.errorWorkflow` being set.
+accepted and a repeated one treated as a duplicate; the same payload and
+missing-field cases run directly against the `jsCode` embedded in the
+Validate payload and Dedupe nodes of `workflows/lead-response.json`,
+checked against `src/validate.js` and `src/dedupe.js` so the two copies
+can't silently drift apart; both workflow JSON files loading with every
+connection target pointing at a real node; the HTTP Request nodes having
+`retryOnFail` set; and the main workflow's `settings.errorWorkflow` being
+set.
 
 ## Sample output
 
