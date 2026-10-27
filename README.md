@@ -235,3 +235,7 @@ placeholder endpoint (which also fails, for the same reason).
 - **Unbounded dedupe store** - every processed lead id is kept forever in
   the workflow static data, so on a busy instance it grows without bound.
   Prune old ids or move dedupe to a database or Redis before heavy use.
+- **No webhook authentication** - the Webhook trigger has no authentication,
+  so anyone who finds the URL can submit leads. Before pointing it at real
+  AI and SMS endpoints, add header auth or a shared secret on the Webhook
+  node, and rate limiting at the proxy.
