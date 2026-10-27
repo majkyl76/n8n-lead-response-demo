@@ -8,9 +8,11 @@ data, to check the wiring, validation, dedupe, retries and error path do what
 the README says. No live reply, SMS or alert service was contacted, and no
 credentials were used.
 
-One thing changed after this run: the reply node was called something else at
-the time, and I have since renamed it Draft reply. Nothing else in the
-workflows was touched, and the tables below use the new name.
+Two things changed after this run. The reply node was called something else
+at the time, and I have since renamed it Draft reply. Its placeholder URL was
+also renamed, so it now reads `https://example.invalid/reply`. The run used
+the old path. Both are dummies that never resolve. Nothing else in the workflows was
+touched, and the tables below use the new node name.
 
 ## Import
 

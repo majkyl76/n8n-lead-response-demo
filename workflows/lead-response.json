@@ -39,7 +39,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://example.invalid/ai",
+        "url": "https://example.invalid/reply",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"name\": $json.name, \"message\": $json.message } }}",
