@@ -3,14 +3,18 @@
 **Date:** 27 October 2026.
 **n8n version:** 2.44.7 (from the installed package).
 
-Both workflows were imported into a local n8n instance and run with dummy
-data to confirm the wiring, validation, dedupe, retries and error path all
-behave as documented. No live AI, SMS or alert service was contacted, and no
+I imported both workflows into a local n8n instance and ran them with dummy
+data, to check the wiring, validation, dedupe, retries and error path do what
+the README says. No live reply, SMS or alert service was contacted, and no
 credentials were used.
+
+One thing changed after this run: the reply node was called something else at
+the time, and I have since renamed it Draft reply. Nothing else in the
+workflows was touched, and the tables below use the new name.
 
 ## Import
 
-Import the error handler first and read its id:
+Import the error handler first and note its id:
 
 ```
 n8n import:workflow --input=workflows/error-handler.json
@@ -19,7 +23,7 @@ n8n list:workflow
 ```
 
 Put that id in place of the `ERROR_WORKFLOW_ID` placeholder in
-`lead-response.json`'s `settings.errorWorkflow`, then import it:
+`lead-response.json`'s `settings.errorWorkflow`, then import that:
 
 ```
 n8n import:workflow --input=workflows/lead-response.json
@@ -35,7 +39,7 @@ n8n update:workflow --active=true --id=QM69QbTAYvDLQsVf
 n8n start
 ```
 
-With only Lead Response active, three dummy payloads were posted to the
+With only Lead Response active, I posted three dummy payloads to the
 webhook:
 
 ```
@@ -51,16 +55,15 @@ curl -X POST http://localhost:5678/webhook/lead -H 'Content-Type: application/js
 #   {"message":"Workflow was started"}
 ```
 
-All three calls returned HTTP 200 straight away
-(`responseMode: onReceived`), with the workflow itself running
-asynchronously.
+All three calls returned HTTP 200 straight away (`responseMode: onReceived`).
+The workflow itself ran in the background.
 
 ## What the executions showed
 
 | Exec | Workflow      | Status  | Last node         | Meaning |
 |------|---------------|---------|-------------------|---------|
-| 1    | Lead Response | error   | AI reply          | Valid lead: Webhook, Validate and Dedupe all ran; the HTTP node failed after 3 retries against `https://example.invalid/ai`, as expected. |
-| 2    | Lead Response | success | Dedupe            | Same lead id posted again: Dedupe detected the duplicate and returned no items, so the run stopped cleanly before reaching AI reply. |
+| 1    | Lead Response | error   | Draft reply       | Valid lead: Webhook, Validate and Dedupe all ran; Draft reply failed after its 3 tries against the placeholder URL, as expected. |
+| 2    | Lead Response | success | Dedupe            | Same lead id posted again: Dedupe detected the duplicate and returned no items, so the run stopped cleanly before Draft reply. |
 | 3    | Lead Response | error   | Validate payload  | Lead missing `phone`: the Code node threw `Missing required field: phone`, as designed. |
 
 At this point the error workflow had not fired. The n8n log showed:
@@ -81,17 +84,16 @@ n8n update:workflow --active=true --id=9SqsqKl2LsukLDVk
 
 | Exec | Workflow      | Status | Last node  | Meaning |
 |------|---------------|--------|------------|---------|
-| 4    | Lead Response | error  | AI reply   | Same expected failure against `example.invalid/ai`. |
+| 4    | Lead Response | error  | Draft reply | Same expected failure against the placeholder URL. |
 | 5    | Error Handler | error  | Send alert | Error Trigger received the failure, Format message built the alert text, and Send alert then failed on its own `example.invalid/alert` endpoint. |
 
 ## Result
 
-Both workflows import and run correctly. Webhook, Validate payload, Dedupe
-and the error handler's Code node all behave as expected; the HTTP Request
-nodes fail as expected against the unresolvable `example.invalid`
-placeholders; and the error workflow fires end to end once it is activated
-alongside the main workflow.
+Both workflows imported and ran. Webhook, Validate payload, Dedupe and the
+error handler's Code node behaved as expected. The HTTP Request nodes failed
+as expected, because `example.invalid` never resolves. The error workflow
+fired end to end once it was activated alongside the main one.
 
-Because the HTTP calls never reach a real endpoint here, the data flow after
-those nodes (Send SMS, Log result) is covered by `test/workflows.test.js`
-rather than by this live run.
+The HTTP calls never reached a real endpoint, so nothing after them (Send
+SMS, Log result) ran here. That part is covered by `test/workflows.test.js`
+instead.
