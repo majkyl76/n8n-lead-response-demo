@@ -42,8 +42,10 @@ flowchart LR
     LR1 -.->|any node fails, via settings.errorWorkflow| EH1
 ```
 
-A rendered version of the same structure, taken from the actual workflow
-JSON, is in [`docs/workflow-diagram.png`](docs/workflow-diagram.png):
+A diagram drawn from the same structure, generated from the nodes and
+connections in the actual workflow JSON (not a screenshot of the n8n
+editor canvas), is in
+[`docs/workflow-diagram.png`](docs/workflow-diagram.png):
 
 ![Workflow structure](docs/workflow-diagram.png)
 
