@@ -87,10 +87,9 @@ tried here; only the CLI route above was run, recorded in
 - **Dedupe** - processed lead ids are kept in n8n workflow static data (a
   plain object that persists between executions), so a lead id seen before
   is skipped rather than answered twice. This is simple and needs no extra
-  infrastructure, but the limit is real: that store lives with the workflow
-  on one n8n instance, so it resets if the workflow is deactivated and
-  reactivated, reimported elsewhere, or if you run more than one instance. A
-  production version would key dedupe off a real datastore instead.
+  infrastructure, but it has real limits - see "Dedupe limits" under
+  [Known limits](#known-limits). A production version would key dedupe off
+  a real datastore instead.
 - **Retries** - the AI reply, Send SMS and Send alert HTTP Request nodes all
   use `retryOnFail` with `maxTries: 3` and a 2000 ms wait between tries. In
   n8n, `maxTries` counts the total number of attempts, including the first
@@ -187,7 +186,9 @@ placeholder endpoint (which also fails, for the same reason).
 - The endpoint URLs are placeholders (`https://example.invalid/...`); swap
   in real AI, SMS and alert endpoints before use.
 - It has never been run against live AI, SMS, or alert services.
-- Dedupe state lives in n8n workflow static data, so it only persists while
-  the workflow stays active, and it's local to that one n8n instance - it
-  isn't shared across instances or carried over if the workflow is
-  reimported elsewhere.
+- **Dedupe limits** - the processed-id store lives in that one workflow's
+  static data on one n8n instance: it is not shared if you run more than one
+  instance, and it is not carried over if the workflow is reimported into a
+  different instance. n8n only persists static data for production
+  executions of an active workflow - manual test runs do not save it back to
+  the workflow record.
