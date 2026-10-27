@@ -4,7 +4,7 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "a0000000-0000-4000-8000-000000000001",
+      "id": "54b2c422-355e-4e6c-b1b0-3171184ca034",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -14,7 +14,7 @@
       "parameters": {
         "jsCode": "// Format a plain alert message from the error payload n8n passes in.\nconst data = $input.first().json;\nconst workflowName = (data.workflow && data.workflow.name) || 'unknown workflow';\nconst lastNode = (data.execution && data.execution.lastNodeExecuted) || 'unknown node';\nconst message = (data.execution && data.execution.error && data.execution.error.message) || 'no error message';\nconst url = (data.execution && data.execution.url) || 'no execution url';\n\nconst text = [\n  'Workflow failed: ' + workflowName,\n  'Failing node: ' + lastNode,\n  'Error: ' + message,\n  'Execution: ' + url\n].join('\\n');\n\nreturn [{ json: { text } }];"
       },
-      "id": "a0000000-0000-4000-8000-000000000002",
+      "id": "3f399d37-16fb-4a81-85f6-4a2ab290ed27",
       "name": "Format message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -29,7 +29,7 @@
         "jsonBody": "={{ { \"text\": $json.text } }}",
         "options": {}
       },
-      "id": "a0000000-0000-4000-8000-000000000003",
+      "id": "a3950e3a-a8ba-441e-846c-8c89ef65b190",
       "name": "Send alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
