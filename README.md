@@ -9,6 +9,14 @@ This is a demo built with dummy data. It is not a production system.
 
 ## What you will see
 
+![Workflow structure](docs/workflow-diagram.png)
+
+The tests (picture generated from a real `npm test` run):
+
+![npm test output](docs/tests.png)
+
+To reproduce it:
+
 ```
 npm test
 ```
