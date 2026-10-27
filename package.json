@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Portfolio demo of a reliable n8n new-lead to AI reply to SMS to log workflow with error handling.",
   "private": true,
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "node --test"
   },
