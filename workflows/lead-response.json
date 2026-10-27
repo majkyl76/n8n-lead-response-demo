@@ -60,7 +60,7 @@
         "url": "https://example.invalid/sms",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"to\": $json.phone, \"body\": $json.reply } }}",
+        "jsonBody": "={{ { \"to\": $('Validate payload').item.json.phone, \"body\": $json.reply } }}",
         "options": {}
       },
       "id": "b06855ad-f34e-489a-b38b-1cd0b4fd625b",
@@ -74,7 +74,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Log the result of the run. In a real workflow this would write to a\n// database or sheet. Here it just builds a small summary object.\nconst payload = $input.first().json;\nreturn [{ json: { status: 'processed', id: payload.id, at: new Date().toISOString() } }];"
+        "jsCode": "// Log the result of the run. In a real workflow this would write to a\n// database or sheet. Here it just builds a small summary object.\n// The incoming item is Send SMS's HTTP response, not the lead, so the id\n// is read back from the validated lead instead.\nconst lead = $('Validate payload').item.json;\nreturn [{ json: { status: 'processed', id: lead.id, at: new Date().toISOString() } }];"
       },
       "id": "67b1f39c-3033-4218-a72f-4847a969d9dc",
       "name": "Log result",
