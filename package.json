@@ -1,7 +1,7 @@
 {
   "name": "n8n-lead-response-demo",
   "version": "1.0.0",
-  "description": "Portfolio demo of a reliable n8n new-lead to AI reply to SMS to log workflow with error handling.",
+  "description": "Portfolio demo of an n8n lead-response workflow with validation, dedupe, retries and error handling.",
   "private": true,
   "engines": {
     "node": ">=18"
