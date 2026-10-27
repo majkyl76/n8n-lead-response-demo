@@ -60,6 +60,10 @@ instead the test runs the `jsonBody` expression and `jsCode` with stand-in
 HTTP responses to confirm the lead's `phone` and `id` survive both HTTP
 Request nodes - see [Tests](#tests).
 
+To regenerate the diagram after changing a workflow file, install Pillow
+and run the script: `pip install Pillow`, then
+`python3 docs/generate-diagram.py`.
+
 ## How to run it
 
 Install the n8n CLI first:

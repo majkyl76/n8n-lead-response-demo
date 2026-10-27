@@ -45,12 +45,37 @@ CATEGORY = {
     'Log result': 'blue',
 }
 
-FONT_DIR = '/usr/share/fonts/truetype/dejavu/'
-f_title = ImageFont.truetype(FONT_DIR + 'DejaVuSans-Bold.ttf', 20)
-f_node_title = ImageFont.truetype(FONT_DIR + 'DejaVuSans-Bold.ttf', 16)
-f_node_sub = ImageFont.truetype(FONT_DIR + 'DejaVuSans.ttf', 12)
-f_caption = ImageFont.truetype(FONT_DIR + 'DejaVuSans.ttf', 13)
-f_section = ImageFont.truetype(FONT_DIR + 'DejaVuSans-Bold.ttf', 18)
+# Tried in order so the diagram can be regenerated outside the original
+# Linux dev box: DejaVu (most Linux distros), then macOS and Windows system
+# fonts, falling back to Pillow's built-in bitmap font if none are found.
+BOLD_CANDIDATES = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    '/System/Library/Fonts/Helvetica.ttc',
+    '/Library/Fonts/Arial Bold.ttf',
+    'C:\\Windows\\Fonts\\arialbd.ttf',
+]
+REGULAR_CANDIDATES = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/System/Library/Fonts/Helvetica.ttc',
+    '/Library/Fonts/Arial.ttf',
+    'C:\\Windows\\Fonts\\arial.ttf',
+]
+
+
+def load_font(candidates, size):
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+f_title = load_font(BOLD_CANDIDATES, 20)
+f_node_title = load_font(BOLD_CANDIDATES, 16)
+f_node_sub = load_font(REGULAR_CANDIDATES, 12)
+f_caption = load_font(REGULAR_CANDIDATES, 13)
+f_section = load_font(BOLD_CANDIDATES, 18)
 
 
 def load_workflow(name):
