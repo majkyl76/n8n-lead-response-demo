@@ -29,6 +29,33 @@ function getNodeCode(workflow, nodeName) {
   return node.parameters.jsCode;
 }
 
+// Stand-in for n8n's $(nodeName) accessor: looks up a fixed item.json by
+// node name from a plain map, the way $('Validate payload').item.json does.
+function makeDollar(nodeOutputs) {
+  return function (nodeName) {
+    const json = nodeOutputs[nodeName];
+    assert.ok(json, 'no stand-in data provided for node: ' + nodeName);
+    return { item: { json } };
+  };
+}
+
+// Evaluates an n8n `={{ ... }}` expression string the way n8n would, with
+// $json and $ as its only free variables.
+function runExpression(expr, { $json, $ }) {
+  const match = expr.match(/^=\{\{([\s\S]*)\}\}$/);
+  assert.ok(match, 'expression has the ={{ }} wrapper: ' + expr);
+  const fn = new Function('$json', '$', 'return (' + match[1] + ');');
+  return fn($json, $);
+}
+
+// Runs a Code node's jsCode string with $, $input and $getWorkflowStaticData
+// as its free variables, for nodes that reach back to an earlier node via $().
+function runCodeNodeWithDollar(jsCode, inputJson, nodeOutputs) {
+  const fn = new Function('$input', '$getWorkflowStaticData', '$', jsCode);
+  const input = { first: () => ({ json: inputJson }) };
+  return fn(input, () => ({}), makeDollar(nodeOutputs));
+}
+
 const validatePayloadCode = getNodeCode(leadResponse, 'Validate payload');
 const dedupeCode = getNodeCode(leadResponse, 'Dedupe');
 
@@ -99,6 +126,39 @@ test('Dedupe node code: a missing id throws, matching src/dedupe.js', () => {
   }
 
   assert.throws(() => runCodeNode(dedupeCode, { id: '' }, {}), { message: expectedMessage });
+});
+
+test('Send SMS jsonBody expression takes phone from Validate payload, not the AI reply response', () => {
+  const sendSmsNode = leadResponse.nodes.find((n) => n.name === 'Send SMS');
+  assert.ok(sendSmsNode, 'node exists: Send SMS');
+
+  const originalLead = { ...basePayload };
+  // Send SMS's own input ($json) is whatever AI reply's HTTP response was,
+  // which replaces the item json and has no lead fields on it.
+  const aiReplyResponse = { reply: 'Thanks for reaching out, Jane!' };
+
+  const result = runExpression(sendSmsNode.parameters.jsonBody, {
+    $json: aiReplyResponse,
+    $: makeDollar({ 'Validate payload': originalLead, Dedupe: originalLead })
+  });
+
+  assert.deepStrictEqual(result, { to: originalLead.phone, body: aiReplyResponse.reply });
+});
+
+test('Log result code takes the lead id from Validate payload/Dedupe, not the Send SMS response', () => {
+  const logResultCode = getNodeCode(leadResponse, 'Log result');
+
+  const originalLead = { ...basePayload };
+  // Log result's own input ($input/$json) is whatever Send SMS's HTTP
+  // response was: an SMS-provider payload, not the lead.
+  const smsResponse = { sid: 'SM123abc456', status: 'queued' };
+
+  const result = runCodeNodeWithDollar(logResultCode, smsResponse, {
+    'Validate payload': originalLead,
+    Dedupe: originalLead
+  });
+
+  assert.strictEqual(result[0].json.id, originalLead.id);
 });
 
 for (const [label, workflow] of [['lead-response', leadResponse], ['error-handler', errorHandler]]) {
