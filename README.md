@@ -224,3 +224,7 @@ placeholder endpoint (which also fails, for the same reason).
   different instance. n8n only persists static data for production
   executions of an active workflow - manual test runs do not save it back to
   the workflow record.
+- **No secondary notification path** - if the alert endpoint itself is
+  unreachable, Send alert fails and nothing else notifies anyone. Check
+  n8n's failed-execution list rather than relying on an alert always
+  arriving.
